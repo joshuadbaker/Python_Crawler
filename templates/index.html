@@ -8,9 +8,20 @@
 <body>
   <div class="container">
     <h1>URL Crawler</h1>
-    <!-- enter a website to be crawled -->
-    <!-- spit out json data of links and pictures from crawl -->
-  </div>
+    <form role="form" method="POST" action="/">
+      <!-- enter a website to be crawled -->
+      <div class="form-group">
+        <input type="text" name="url" class="form-control" id="url-box" placeholder="URL">
+      </div>
+      <button type="submit" class="btn btn-default">Start Crawl!</button>
+      <!-- spit out json data of links and pictures from crawl -->
+    </form>
 
+    <br>
+    {% for error in erros %}
+      <h4>{{ error }}</h4>
+    {% endfor %}
+    
+  </div>
 </body>
 </html>
