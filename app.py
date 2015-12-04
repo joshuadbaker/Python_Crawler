@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request
 from flask import jsonify
+from flask.ext.sqlalchemy import SQLAlchemy
 from bs4 import BeautifulSoup
 from IPython import embed
 from rq import Queue
@@ -10,7 +11,10 @@ import os
 import requests
 
 app = Flask(__name__)
+db = SQLAlchemy(app)
 q = Queue(connection=conn)
+
+from models import Crawl, Image
 
 class Crawl(object):
   name = ""
@@ -36,30 +40,26 @@ def get_urls(url, max_depth):
   base_url = url 
   if max_depth == 0:
     return
-  # try:
-  r = requests.get(url)
-  # except:
-  #   errors.append(
-  #     "Unable to get URL. Please make sure it's valid and try again."
-  #   )
-  #   return {"error": errors}
+  try:
+    r = requests.get(url)
+  except:
+    errors.append(
+      "Unable to get URL. Please make sure it's valid and try again."
+    )
+    return {"error": errors}
+  result = Crawl
+  result.name = url,
+  result.images = get_images(url)
+
+
+
+  return result 
   
   links = BeautifulSoup(r.text, 'html.parser').find_all('a')
-  urls = []
+
   for link in links:
     url = base_url + link["href"]
-    get_images(url)
-    urls.append(url)
-    
-    # return urls
-    # urls = []
-    # urls.append(link['href'])
-    # # link['href']
-    # # get_images(url)
-    # print(urls)
-    get_urls(url, max_depth-1)
-
-    
+    get_urls(url, max_depth-1)    
   
 def get_images(url):
   try:
@@ -75,31 +75,34 @@ def get_images(url):
   for image in images:
     # print((image['src'])
     collection.append(image["src"])
-    print(collection)
+    # print(collection)
+
+  
   return collection
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
   results = {}
   if request.method == "POST":
+    
     url = request.form['url']
-    # get_urls(url, 1)
+    # get_urls(url, 2)
     job = q.enqueue_call(
-      func=get_urls, args=(url, 1), result_ttl=5000
+      func=get_urls, args=(url, 2), result_ttl=5000
     )
-    print(job.get_id)
-    # create_crawl()
-    # crawl.name = url
-    # crawl.images = get_images(url)
-    # crawl.crawl_id = job.get_id()
-    # # results = jsonify(crawl_name=(crawl.name), crawl_id=(crawl.crawl_id), crawl_images=(crawl.images))
-    # print(crawl.crawl_id)
+  print(job.result) 
   return render_template('index.html', results=results)
 
 @app.route("/results/<job_key>", methods=['GET'])
 def get_results(job_key):
   job = Job.fetch(job_key, connection=conn)
-  results = jsonify(crawl_name=(crawl.name), crawl_id=(crawl.crawl_id), crawl_images=(crawl.images))
-  return results
+  if job.is_finished:
+    result = Result.query.filter_by(id=job)
+    results = (
+      crawl.name,
+      crawl.images
+      )[:10]
+    print(results)
+    # return jsonify(results)
 if __name__ == '__main__':
   app.run()
