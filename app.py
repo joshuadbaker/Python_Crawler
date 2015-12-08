@@ -39,7 +39,7 @@ def get_urls(url, max_depth):
     crawl = Crawl(
       name=url,
       # crawl_all = crawl_collection.append(crawl),
-      images=imgs
+      # images=imgs
       )
     
     db.session.add(crawl)
@@ -86,10 +86,10 @@ def index():
     url = request.form['url']
     print(get_urls(url, 2))
 
-  #   job = q.enqueue_call(
-  #     func=get_urls, args=(url, 2,), result_ttl=5000
-  #   )
-  # print(job.result, job.get_id()) 
+    job = q.enqueue_call(
+      func=get_urls, args=(url, 2,), result_ttl=5000
+    )
+  print(job.get_id()) 
   return render_template('index.html', results=results)
 
 @app.route("/results/<job_key>", methods=['GET'])

@@ -8,12 +8,12 @@ class Crawl(db.Model):
 
   id = db.Column(db.Integer, primary_key=True)
   name = db.Column(db.String())
-  # crawl_all = db.Column(JSON)
+  crawl_all = db.Column(JSON)
   images = relationship("Image")
 
-  def __init__(self, name, images):
+  def __init__(self, name):
     self.name = name
-    # self.crawl_all = crawl_all
+    self.crawl_all = crawl_all
     self.images = images
     
   def __repr__(self):
