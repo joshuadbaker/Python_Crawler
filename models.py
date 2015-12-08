@@ -1,36 +1,37 @@
 from app import db
 from sqlalchemy.dialects.postgresql import JSON
-from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 
 class Crawl(db.Model):
-  __tablename__ = 'crawls'
+  __tablename__ = 'crawl'
 
   id = db.Column(db.Integer, primary_key=True)
   name = db.Column(db.String())
-  crawl_all = db.Column(JSON)
+  # crawl_all = db.Column(JSON)
   images = relationship("Image")
 
-  def __init__(self, name, images, crawl_all):
+  def __init__(self, name, images):
     self.name = name
+    # self.crawl_all = crawl_all
     self.images = images
-    self.crawl_all = crawl_all
-
+    
   def __repr__(self):
     return '<id {}>'.format(self.id)
 
 class Image(db.Model):
-  __tablename__ = 'images'
-
+  __tablename__ = 'image'
   id = Column(db.Integer, primary_key=True)
-  crawl_id = Column(db.Integer, ForeignKey('crawl.id'))
+  name = db.Column(db.String())
   image_all = db.Column(JSON)
+  crawl_id = Column(db.Integer, ForeignKey('crawl.id'))
+  
 
-  def __init__(self, crawl_id, image_all):
-    self.crawl_id = crawl_id
+  def __init__(self, name, image_all):
+    self.name = name
     self.image_all = image_all
 
   def __repr__(self):
-    return '<id {>'.format(self.id)
+    return '<id {}>'.format(self.id)
 
 
