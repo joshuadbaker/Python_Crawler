@@ -1,1 +1,2 @@
-Generic single-database configuration.
+# Python_Crawler
+This is my first foray into Python. I am building a basic python url crawler.  The app.py file contains the logic for the crawler itself.  The models for the database are contained in the models.py.  The other files contain the necessary code for the structure of the entire app.  The app is set up to run on localhost:5000.  To run app enter "python manage.py runserver" in terminal.
