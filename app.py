@@ -21,10 +21,9 @@ from models import Crawl, Image
 def get_urls(url, max_depth):
 
   errors = []
-
-  base_url = url 
+ 
   if max_depth == 0:
-    return
+    return 
   try:
     r = requests.get(url)
   except:
@@ -33,49 +32,42 @@ def get_urls(url, max_depth):
     )
     return {"error": errors}
 
+  parsed_html = BeautifulSoup(r.text, 'html.parser')
+  pics = parsed_html.find_all('img')
+
   try:
-    imgs = get_images(url)
+    
     crawl_collection = []
     crawl = Crawl(
       name=url,
-      # crawl_all = crawl_collection.append(crawl),
-      # images=imgs
+      crawl_all = crawl_collection.append(crawl)
       )
-    
+
     db.session.add(crawl)
     db.session.commit()
-    return crawl
+
+    for pic in pics:
+      image = Image(
+        source = pic['src'],
+        crawl_id = crawl.id
+        )
+      db.session.add(image)
+      db.session.commit()
+    
   except:
     errors.append("Unable to add item to database.")
     return {"error": errors}
   
-  links = BeautifulSoup(r.text, 'html.parser').find_all('a')
+  links = parsed_html.find_all('a')
   for link in links:
-    url = base_url + link["href"]
-    get_urls(url, max_depth-1)
-  
-def get_images(url):
-  try:
-    r = requests.get(url)
-  except:
-    errors.append(
-      "Unable to get URL. Please make sure it's valid and try again."
-    )
-    return {"error": errors}
+    if "http" not in link["href"]:
+      base_url = url
+      url = base_url + link["href"]
+    else:
+      url = link
+    if Crawl.filter_by(crawl.name) != url:
+      get_urls(url, max_depth-1)
 
-  pics = BeautifulSoup(r.text, 'html.parser').find_all('img')
-  for pic in pics:
-    collection = []
-    collection.append(pic["src"])
-    image = Image( 
-      name = pic["src"],
-      image_all=collection
-      )
-    
-    db.session.add(image)
-    db.session.commit()
-
-    return image.image_all
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -84,12 +76,12 @@ def index():
   if request.method == "POST":
     
     url = request.form['url']
-    print(get_urls(url, 2))
+    get_urls(url, 2)
 
-    job = q.enqueue_call(
-      func=get_urls, args=(url, 2,), result_ttl=5000
-    )
-  print(job.get_id()) 
+  #   job = q.enqueue_call(
+  #     func=get_urls, args=(url, 2,), result_ttl=5000
+  #   )
+  # print(job.get_id()) 
   return render_template('index.html', results=results)
 
 @app.route("/results/<job_key>", methods=['GET'])
