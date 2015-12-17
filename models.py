@@ -9,14 +9,14 @@ class Crawl(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String())
     url = db.Column(db.String())
-    # job_id = Column(db.Integer, ForeignKey('job.id'))
     crawl_all = db.Column(JSON)
     images = relationship("Image", backref="crawl")
+    result_id = Column(db.Integer, ForeignKey('result.id'))
 
-    def __init__(self, name, url):
+    def __init__(self, name, url, result_id):
         self.name = name
         self.url = url
-        # self.job_id = job_id
+        self.result_id = result_id
 
     
     def __repr__(self):
@@ -39,26 +39,9 @@ class Image(db.Model):
     def __repr__(self):
         return '<id {}>'.format(self.id)
 
-# class Job(db.Model):
-#     __tablename__ = 'job'
-#     id = Column(db.Integer, primary_key=True)
-#     job_all = db.Column(JSON)
-#     # crawls = relationship("Crawl", backref="job")
-
-#     # def __init__(self):
-
-#     def __repr__(self):
-#         return '<id {}>'.format(self.id)
-
-class Worker(db.Model):
-    __tablename__ = 'worker'
+class Result(db.Model):
+    __tablename__ = 'result'
     id = Column(db.Integer, primary_key=True)
-    # job_id = Column(db.Integer, ForeignKey('crawl.id'))
-
-    def __init_(self, job_id):
-        job_id = job_id
-
-    def __repr__(self):
-        return '<id {}>'.format(self.id)
+    crawls = relationship("Crawl", backref="result")
 
 
