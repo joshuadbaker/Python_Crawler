@@ -19,84 +19,102 @@ q = Queue(connection=conn)
 from models import Crawl, Image
 
 def get_urls(url, max_depth):
-
-  errors = []
+    errors = []
  
-  if max_depth == 0:
-    return 
-  try:
-    r = requests.get(url)
-  except:
-    errors.append(
-      "Unable to get URL. Please make sure it's valid and try again."
-    )
-    return {"error": errors}
-
-  parsed_html = BeautifulSoup(r.text, 'html.parser')
-  pics = parsed_html.find_all('img')
-
-  try:
-    
-    crawl_collection = []
-    crawl = Crawl(
-      name=url,
-      crawl_all = crawl_collection.append(crawl)
-      )
-
-    db.session.add(crawl)
-    db.session.commit()
-
-    for pic in pics:
-      image = Image(
-        source = pic['src'],
-        crawl_id = crawl.id
+    if max_depth == 0:
+        return 
+    try:
+        r = requests.get(url)
+    except:
+        errors.append(
+        "Unable to get URL. Please make sure it's valid and try again."
         )
-      db.session.add(image)
-      db.session.commit()
+        return {"error": errors}
+
+    parsed_html = BeautifulSoup(r.text, 'html.parser')
+    pics = parsed_html.find_all('img')
+    title = parsed_html.title
+    print(title.string)
+    try:
+        crawl = Crawl(
+        name = title.string,
+        url = url,
+        # job_id = job.id
+        )
+
+        db.session.add(crawl)
+        db.session.commit()
+        for pic in pics:
+            image = Image(
+                # name = pic["alt"],
+                source = pic["src"],
+                crawl_id = crawl.id
+                )
+            # if image.name == "alt":
+            #     image.name = "No Title"
+            for image in crawl.images:
+                print(image.source)
+            db.session.add(image)
+            db.session.commit()
+            # return crawl.id
+    except Exception as e:
+        print(e)
+      
+      
+    except:
+        errors.append("Unable to add item to database.")
+
+        return {"error": errors}
     
-  except:
-    errors.append("Unable to add item to database.")
-    return {"error": errors}
-  
-  links = parsed_html.find_all('a')
-  for link in links:
-    if "http" not in link["href"]:
-      base_url = url
-      url = base_url + link["href"]
-    else:
-      url = link
-    if Crawl.filter_by(crawl.name) != url:
-      get_urls(url, max_depth-1)
+    links = parsed_html.find_all('a')
+    # clean up logic to extract clean urls as strings not object 'Tag'
+    base_url = url
+    for link in links:
+        if link.has_attr("href"):
+            url = link["href"]
+            if "http" in url:
+                url = url
+            else:
+                url = base_url + link["href"]  
+            if Crawl.query.filter_by(url=crawl.url) != url:
+                get_urls(url, max_depth-1) 
 
-
+def do_your_job(urls):
+    result = Result(
+        crawl = crawl
+        )
+    for url in urls:
+        result.crawl = get_urls(url, 2)
+        
+    return result.id 
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-  results = {}
-  if request.method == "POST":
-    
-    url = request.form['url']
-    get_urls(url, 2)
-
-  #   job = q.enqueue_call(
-  #     func=get_urls, args=(url, 2,), result_ttl=5000
-  #   )
-  # print(job.get_id()) 
-  return render_template('index.html', results=results)
+    results = {}
+    if request.method == "POST":
+        url = request.form['url']
+        job = q.enqueue_call(
+            func=do_your_job, args=(urls,), result_ttl=5000
+        )
+    print(job.get_id()) 
+    return render_template('index.html', results=results)
 
 @app.route("/results/<job_key>", methods=['GET'])
 def get_results(job_key):
 
-  job = Job.fetch(job_key, connection=conn)
+    job = Job.fetch(job_key, connection=conn)
 
-  if job.is_finished:
-    crawl = Crawl.query.filter_by(id=job.result).first()
-    results = sorted(
-      crawl.name,
-      crawl.images
-      )
-    print(results)
-    # return jsonify(results)
+    if job.is_finished:
+        return str(job.result), 200
+        result = Result.query.filter_by(id=Result.id).first()
+        results = sorted(
+            result.crawl
+        )
+        print(results)
+        return results
+    else:
+        return "Nay!", 202
+
 if __name__ == '__main__':
-  app.run()
+    app.run()
 
