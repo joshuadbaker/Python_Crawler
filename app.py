@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 from flask.ext.sqlalchemy import SQLAlchemy
+import json
+import operator
 import os
 from bs4 import BeautifulSoup
 from IPython import embed
@@ -16,13 +18,13 @@ db = SQLAlchemy(app)
 
 q = Queue(connection=conn)
 
-from models import Crawl, Image, Result
+from models import Crawl, Image, Result, Task
 
 def get_urls(url, max_depth, r_id):
     errors = []
  
     if max_depth == 0:
-        return 
+        return True
     try:
         r = requests.get(url)
     except:
@@ -36,12 +38,12 @@ def get_urls(url, max_depth, r_id):
     title = parsed_html.title
     if title.string == "Not found.":
         title.string = "No Title"
-    # print(title.string)
+    print(title.string)
     try:
         crawl = Crawl(
-        name = title.string,
-        url = url,
-        result_id = r_id
+            name = title.string,
+            url = url,
+            result_id = r_id
         )
 
         db.session.add(crawl)
@@ -52,12 +54,16 @@ def get_urls(url, max_depth, r_id):
             image = Image(
                 # name = pic["alt"],
                 source = pic["src"],
-                crawl_id = crawl.id
-                )
+                crawl_id = crawl.id,
+                )  
+            db.session.add(image)
+            db.session.commit()
+
             # if image.name == "alt":
             #     image.name = "No Title"
             for image in crawl.images:
-                # print(image.source)
+                print("Saving image")
+                print(image.source)
                 db.session.add(image)
                 db.session.commit()
     except Exception as e:
@@ -70,7 +76,6 @@ def get_urls(url, max_depth, r_id):
         return {"error": errors}
     
     links = parsed_html.find_all('a')
-    # clean up logic to extract clean urls as strings not object 'Tag'
     base_url = url
     for link in links:
         if link.has_attr("href"):
@@ -80,55 +85,65 @@ def get_urls(url, max_depth, r_id):
             else:
                 url = base_url + link["href"]  
             if Crawl.query.filter_by(url=crawl.url) != url:
-                get_urls(url, max_depth-1, r_id) 
-
-def do_your_job(url):
-    result = Result()
-    db.session.add(result)
-    db.session.commit()
-    get_urls(url, 2, result.id)
-    # result.crawl = 
-    # for url in urls:
-    #     result.crawl = get_urls(url, 2)
-    results = {}
-    for crawl in result.crawls:
-        # print(crawl)
-        results[crawl.name] = []
-        print(crawl.images)
-        for image in crawl.images:
-            print(image)
-            # results[crawl.name].append(image.source)
-    # return results
-    
-    # print(result.crawls)
-    # return result.crawls
+                print(url)
+                get_urls(url, max_depth-1, r_id)
+    return True             
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    results = {}
     if request.method == "POST":
-        url = request.form['url']
-        # do_your_job(url)
-        job = q.enqueue_call(
-            func=do_your_job, args=(url,), result_ttl=5000
-        )
-    print(job.result, job.get_id()) 
-    return render_template('index.html', results=results)
+        
+        urls = request.get_json()
+        # code for array that will replace the form submission
+        # urls = ['https://www.nytimes.com', 'https://www.tumblr.com']
+        
+        result = Result()
+        db.session.add(result)
+        db.session.commit()
 
-@app.route("/results/<job_key>", methods=['GET'])
-def get_results(job_key):
-
-    job = Job.fetch(job_key, connection=conn)
-
-    if job.is_finished:
-        return str(job.result), 200
-        result = Result.query.filter_by(job.results)
-        results = sorted(
-            results
+        for url in urls:
+            job = q.enqueue_call(   
+                func=get_urls, args=(url, 2, result.id), result_ttl=5000
             )
-        return jsonify(results)
-    else:
-        return "Nay!", 202
+            task = Task(
+                completed = False,
+                result_id = result.id,
+                url = url,
+                job_id = job.get_id()
+            )
+            db.session.add(task)
+            db.session.commit()
+ 
+        return jsonify(dict(id=result.id, msg=urls))
+    else:   
+        return render_template('index.html', results={})
+
+@app.route("/tasks/<result_id>", methods=['GET'])
+def get_tasks(result_id):
+    num_completed=0 
+    num_inprogress=0
+    result = Result.query.filter_by(id=result_id).first()
+    for task in result.tasks:
+        job = Job.fetch(task.job_id, connection=conn)
+        if job.result:
+            num_completed += 1
+        else: 
+            num_inprogress += 1
+    return json.dumps(dict(completed=num_completed, inprogress=num_inprogress))        
+ 
+@app.route("/results/<result_id>", methods=['GET'])
+def get_results(result_id):
+
+    # job = Job.fetch(job_key, connection=conn)
+    results = {}
+    # return str(job.result), 200
+    result = Result.query.filter_by(id=result_id).first()
+    for crawl in result.crawls:
+        image_holder = []
+        results[crawl.url] = image_holder
+        for image in crawl.images:
+            image_holder.append(image.source) 
+    return json.dumps(results)
 
 if __name__ == '__main__':
     app.run()
