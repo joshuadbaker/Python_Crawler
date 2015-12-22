@@ -32,7 +32,7 @@ def test_get_results():
 @task                     
 def submit():
     url = "http://localhost:5000/"
-    data = json.dumps(["http://www.tumblr.com"])
+    data = json.dumps(["http://www.beatport.com/", "http://www.docker.com/"])
     headers = {'content-type': "application/json"}
     response = requests.request("POST", url, data=data, headers=headers)
     print(response.text)    

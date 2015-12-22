@@ -84,7 +84,7 @@ def get_urls(url, max_depth, r_id):
                 url = url
             else:
                 url = base_url + link["href"]  
-            if Crawl.query.filter_by(url=crawl.url) != url:
+            if not Crawl.query.filter_by(url=url):
                 print(url)
                 get_urls(url, max_depth-1, r_id)
     return True             
@@ -128,8 +128,8 @@ def get_tasks(result_id):
         if job.result:
             num_completed += 1
         else: 
-            num_inprogress += 1
-    return json.dumps(dict(completed=num_completed, inprogress=num_inprogress))        
+            num_in_progress += 1
+    return json.dumps(dict(completed=num_completed, in_progress=num_in_progress))        
  
 @app.route("/results/<result_id>", methods=['GET'])
 def get_results(result_id):
