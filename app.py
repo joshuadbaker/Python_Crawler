@@ -95,7 +95,7 @@ def index():
         
         urls = request.get_json()
         # code for array that will replace the form submission
-        # urls = ['https://www.nytimes.com', 'https://www.tumblr.com']
+        urls = ['https://www.nytimes.com', 'https://www.tumblr.com']
         
         result = Result()
         db.session.add(result)
