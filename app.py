@@ -23,8 +23,8 @@ from models import Crawl, Image, Result, Task
 def get_urls(url, max_depth, r_id):
     errors = []
  
-    if max_depth == 0:
-        return True
+    # if max_depth == 0:
+    #     return True
     try:
         r = requests.get(url)
     except:
@@ -62,17 +62,12 @@ def get_urls(url, max_depth, r_id):
             # if image.name == "alt":
             #     image.name = "No Title"
             for image in crawl.images:
-                print("Saving image")
-                print(image.source)
+                # print("Saving image")
+                # print(image.source)
                 db.session.add(image)
-                db.session.commit()
-    except Exception as e:
-        print(e)
-      
-      
+                db.session.commit()  
     except:
         errors.append("Unable to add item to database.")
-
         return {"error": errors}
     
     links = parsed_html.find_all('a')
@@ -87,15 +82,15 @@ def get_urls(url, max_depth, r_id):
             if not Crawl.query.filter_by(url=url):
                 print(url)
                 get_urls(url, max_depth-1, r_id)
-    return True             
+    # return True             
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == "POST":
         
-        urls = request.get_json()
+        # urls = request.get_json()
         # code for array that will replace the form submission
-        urls = ['https://www.nytimes.com', 'https://www.tumblr.com']
+        urls = ["https://www.tumblr.com/"]
         
         result = Result()
         db.session.add(result)
@@ -121,7 +116,7 @@ def index():
 @app.route("/tasks/<result_id>", methods=['GET'])
 def get_tasks(result_id):
     num_completed=0 
-    num_inprogress=0
+    num_in_progress=0
     result = Result.query.filter_by(id=result_id).first()
     for task in result.tasks:
         job = Job.fetch(task.job_id, connection=conn)

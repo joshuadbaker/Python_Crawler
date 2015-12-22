@@ -18,7 +18,7 @@ def run_once():
 
 @task
 def test_get_urls():
-    app.get_urls('http://www.tumblr.com', 1, 42)
+    app.get_urls('http://www.tumblr.com', 3, 42)
 
 
 @task
